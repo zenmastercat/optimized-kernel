@@ -26,7 +26,9 @@ with lib.kernel;
   cpu = {
     GENERIC_CPU = no;
     X86_NATIVE_CPU = yes;
-    # Only Intel CPU support code.
+    # Only Intel CPU support code (the vendor switches need PROCESSOR_SELECT).
+    PROCESSOR_SELECT = yes;
+    CPU_SUP_INTEL = yes;
     CPU_SUP_AMD = no;
     CPU_SUP_HYGON = no;
     CPU_SUP_CENTAUR = no;
