@@ -30,6 +30,7 @@ import urllib.request
 
 TRACKED = [
     "kernel/sources.json",
+    "nvidia/sources.json",
     "hardware/profile.json",
     "hardware/loaded-modules.txt",
     "hardware/initrd-modules.txt",
@@ -188,13 +189,91 @@ def update_sources(root, notes):
     return old, new
 
 
+def prefetch_github(repo, tag):
+    out = run(["nix", "flake", "prefetch", "--json", f"github:{repo}/{tag}"],
+              capture_output=True).stdout
+    return json.loads(out)["hash"]
+
+
+def update_nvidia(root, notes):
+    """Follow NVIDIA's newest Linux release (download.nvidia.com latest.txt)."""
+    path = root / "nvidia" / "sources.json"
+    old = json.loads(path.read_text())
+    req = urllib.request.Request("https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt",
+                                 headers={"User-Agent": "optimized-kernel-updater"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        latest = r.read().decode().split()[0]
+    if not re.fullmatch(r"\d+\.\d+(\.\d+)?", latest):
+        raise SystemExit(f"unexpected NVIDIA latest.txt content: {latest!r}")
+    if vtuple(latest) <= vtuple(old["version"]):
+        return old, old
+    try:
+        new = {
+            "version": latest,
+            "sha256_64bit": prefetch(
+                f"https://download.nvidia.com/XFree86/Linux-x86_64/{latest}/NVIDIA-Linux-x86_64-{latest}.run"),
+            "openSha256": prefetch_github("NVIDIA/open-gpu-kernel-modules", latest),
+            "settingsSha256": prefetch_github("NVIDIA/nvidia-settings", latest),
+            "persistencedSha256": prefetch_github("NVIDIA/nvidia-persistenced", latest),
+        }
+    except subprocess.CalledProcessError:
+        notes.append(f"NVIDIA {latest} is out, but not all of its sources are published yet; "
+                     f"staying on {old['version']}")
+        return old, old
+    path.write_text(json.dumps(new, indent=2) + "\n")
+    notes.append(f"NVIDIA driver {old['version']} -> {latest}")
+    return old, new
+
+
+# ---------------------------------------------------------------- checks
+def check_build(root, notes):
+    """After a build: every setting from kernel/settings.nix must have its value,
+    and every module this PC has loaded should exist (built in or as a module)."""
+    cfg = run(["nix", "build", "--no-link", "--print-out-paths", f"{root}#kernel.configfile"],
+              capture_output=True).stdout.strip()
+    wanted = json.loads(run(["nix", "eval", "--json", f"{root}#kernel.wantedConfig"],
+                            capture_output=True).stdout)
+    have = {}
+    for line in pathlib.Path(cfg).read_text().splitlines():
+        if line.startswith("CONFIG_") and "=" in line:
+            k, v = line[len("CONFIG_"):].split("=", 1)
+            have[k] = v.strip('"')
+        elif line.startswith("# CONFIG_") and line.endswith(" is not set"):
+            have[line[len("# CONFIG_"):-len(" is not set")]] = "n"
+    wrong, absent = [], []
+    for k, v in wanted.items():
+        if k not in have:
+            if v != "n":  # an option that is not there is off anyway
+                absent.append(k)
+        elif have[k] != v:
+            wrong.append(f"{k}={have[k]} (wanted {v})")
+    if absent:
+        notes.append(f"settings this kernel does not have (ignored): {', '.join(sorted(absent))}")
+    if wrong:
+        raise SystemExit("kernel settings did not apply: " + "; ".join(wrong))
+
+    kdir = run(["nix", "build", "--no-link", "--print-out-paths", f"{root}#kernel^*"],
+               capture_output=True).stdout.split()
+    mods = set()
+    for out in kdir:
+        for d in pathlib.Path(out).glob("lib/modules/*"):
+            mods |= {norm(p.name.split(".ko")[0]) for p in d.rglob("*.ko*")}
+            b = d / "modules.builtin"
+            if b.exists():
+                mods |= {norm(pathlib.Path(l).name.split(".ko")[0]) for l in b.read_text().split()}
+    loaded = read_list(root / "hardware" / "loaded-modules.txt")
+    missing = sorted(m for m in loaded - mods if not m.startswith("nvidia"))
+    if missing:
+        notes.append(f"{len(missing)} loaded-before modules not in this kernel: {', '.join(missing)}")
+
+
 # ---------------------------------------------------------------- build
 def build(root, args, log_dir):
     log_dir.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     logf = log_dir / f"build-{stamp}.log"
     cmds = [["nix", "build", "-L", "--no-link", "--print-out-paths",
-             f"{root}#kernel", f"{root}#nvidia-open"]]
+             f"{root}#kernel", f"{root}#nvidia-open", f"{root}#nvidia"]]
     if args.nixos_flake:
         cmds.append(["nix", "build", "-L", "--no-link", "--print-out-paths",
                      f"{args.nixos_flake}#nixosConfigurations.{args.host}.config.system.build.toplevel",
@@ -249,6 +328,7 @@ def main():
     try:
         prof = refresh_hardware(root, args, notes)
         old, new = update_sources(root, notes)
+        nv_old, nv_new = update_nvidia(root, notes)
         if not args.no_nixpkgs:
             run(["nix", "flake", "update", "nixpkgs", "--flake", str(root)], capture_output=True)
         changed = [rel for rel in TRACKED
@@ -259,6 +339,8 @@ def main():
             "version": new["version"],
             "previousVersion": old.get("version"),
             "cachyosRelease": new["source"]["tag"],
+            "nvidiaVersion": nv_new["version"],
+            "previousNvidiaVersion": nv_old["version"],
             "kernelOrgLatestStable": new["kernelOrgLatestStable"],
             "cpu": prof["cpuModel"],
             "keptModules": len(read_list(root / "hardware" / "keep-modules.txt")),
@@ -277,13 +359,15 @@ def main():
                 summary["notes"].append("every file was put back as it was")
                 print(json.dumps(summary))
                 return 1
+            check_build(root, notes)
             summary["status"] = "built"
             summary["outputs"] = outs
         if args.commit and changed:
             if not args.build:
                 raise SystemExit("--commit needs --build, so only tested updates are committed")
             run(["git", "-C", str(root), "add", *changed])
-            msg = (f"Update kernel to {new['version']} ({new['source']['tag']})\n\n"
+            msg = (f"Update kernel to {new['version']} ({new['source']['tag']}), "
+                   f"NVIDIA {nv_new['version']}\n\n"
                    f"BORE {new['bore']['commit'][:12]}, config {new['config']['commit'][:12]}, "
                    f"{summary['keptModules']} kept modules.\n"
                    + "".join(f"- {n}\n" for n in notes) + f"\n{CO_AUTHOR}\n")

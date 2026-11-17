@@ -18,6 +18,19 @@ The CPU and thread count are recorded in `hardware/profile.json`.
 
 The settings are in `kernel/settings.nix`; the build pipeline is in `kernel/default.nix`.
 
+## GPU driver
+
+`nvidia/` builds NVIDIA's driver for this PC's RTX 5080 (Blackwell GB203) from [NVIDIA/open-gpu-kernel-modules](https://github.com/NVIDIA/open-gpu-kernel-modules), at NVIDIA's newest Linux release (`nvidia/sources.json`, from `download.nvidia.com/.../latest.txt`), not the version nixpkgs ships.
+
+| Step | What | Why |
+|---|---|---|
+| Release | userspace (`.run`) + open kernel modules + nvidia-settings + nvidia-persistenced of the same version, through nixpkgs' `nvidiaPackages.mkDriver` | newest Blackwell fixes and CUDA without waiting for nixpkgs |
+| Compiler | the kernel-facing layer builds with this kernel's Clang, `-O3`, `-march=native`; NVIDIA's core keeps NVIDIA's own flags (`-O2`, no SSE) | kernel code may not use SSE; changing NVIDIA's core flags is not worth the risk |
+| Firmware | only `gsp_ga10x` / `ucodes_ga10x` are declared (Ampere and newer; the source maps GB20X to them); the Turing `tu10x` files stay out of the initrd | about 30 MB less per boot entry on a 1 GB `/boot`; the build stops if a release maps Blackwell to other firmware |
+| Modules | `nvidia-peermem` (InfiniBand GPUDirect) is not built | no InfiniBand here |
+
+In a NixOS config: `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.optimized or config.boot.kernelPackages.nvidiaPackages.latest;` (the `or` keeps nixpkgs' driver for fallback kernels).
+
 ### Safety groups
 
 Modules in these groups stay built even if the PC has not used them yet: all filesystems (NTFS, exFAT, ISO…), the firewall and container networking, VPNs (WireGuard, tun), Wi-Fi/Bluetooth stacks, USB storage/serial/network adapters, input devices and game controllers, webcams, USB audio, SD cards, disk encryption, KVM/VFIO, sensors, and Intel/Realtek network cards.
@@ -47,8 +60,9 @@ Each run:
 1. **Re-checks the PC.** CPU model, thread count and currently loaded modules; with `--nixos-flake`, the initrd's modules. Newly seen modules are added to the keep list, and nothing is ever removed from it. If the CPU model changed, it stops (use `--accept-new-cpu`).
 2. **Finds the newest stable CachyOS release** that has a BORE patch, and notes when kernel.org already has a newer version that CachyOS has not released yet.
 3. **Pins the newest BORE patch and CachyOS config**, and moves `nixpkgs` forward (newer Clang and NVIDIA driver). Use `--no-nixpkgs` to keep it.
-4. **`--build`** builds the kernel, the NVIDIA open module and, with `--nixos-flake`, the whole system. On failure, every file is put back.
-5. **`--commit` / `--push`** records a passing update in git.
+4. **Follows NVIDIA's newest release** and pins the hashes of its four sources; if one is not published yet, it waits for the next run.
+5. **`--build`** builds the kernel, the NVIDIA driver and, with `--nixos-flake`, the whole system, then checks that every setting in `kernel/settings.nix` has its value in the final config and lists modules this PC used that the new kernel lacks. On failure, every file is put back.
+6. **`--commit` / `--push`** records a passing update in git.
 
 The last line printed is a JSON summary. Build logs are in `~/.cache/optimized-kernel/`.
 

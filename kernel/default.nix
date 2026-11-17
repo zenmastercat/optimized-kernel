@@ -113,6 +113,17 @@ let
     extraPassthru = {
       inherit trimmedConfig baseSrc;
       cachyosRelease = src'.source.tag;
+      # Expected final value of each tuned option ("y", "n", "m" or the text),
+      # checked against the built config by scripts/update.py.
+      wantedConfig = lib.mapAttrs (_: v: v.tristate or v.freeform) (
+        settings.cachy
+        // settings.bore
+        // settings.lto
+        // settings.cpu
+        // settings.timing
+        // settings.perf
+        // settings.nixos
+      );
     };
   };
 
@@ -126,6 +137,14 @@ let
         vmware = prev.vmware.overrideAttrs (old: {
           makeFlags = (old.makeFlags or [ ]) ++ final.kernel.commonMakeFlags;
         });
+
+        # Own NVIDIA driver (../nvidia), newest NVIDIA release, fitted to the GPU.
+        nvidiaPackages = prev.nvidiaPackages // {
+          optimized = import ../nvidia {
+            inherit lib;
+            inherit (prev) nvidiaPackages;
+          };
+        };
       }
     )
   );

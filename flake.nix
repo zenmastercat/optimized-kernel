@@ -22,7 +22,10 @@
       packages.${system} = {
         kernel = built.kernel;
         config = built.trimmedConfig;
-        nvidia-open = built.linuxPackages.nvidiaPackages.latest.open;
+        nvidia-open = built.linuxPackages.nvidiaPackages.optimized.open;
+        nvidia = built.linuxPackages.nvidiaPackages.optimized;
+        # nixpkgs' own driver, for comparison and as the fallback entries' driver
+        nvidia-open-nixpkgs = built.linuxPackages.nvidiaPackages.latest.open;
         default = built.kernel;
       };
 
