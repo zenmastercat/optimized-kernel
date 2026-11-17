@@ -1,0 +1,19 @@
+{
+  "version": "7.3.4",
+  "source": {
+    "tag": "cachyos-7.3.4-1",
+    "url": "https://github.com/CachyOS/linux/releases/download/cachyos-7.3.4-1/cachyos-7.3.4-1.tar.gz",
+    "hash": "sha256-aVxkHt1d+YSPkxwGv5ejBzTl8okQNnk31f6iNc/TlTU="
+  },
+  "bore": {
+    "commit": "f3770b16d069a1bce8dfa63841042137f8b43434",
+    "url": "https://raw.githubusercontent.com/CachyOS/kernel-patches/f3770b16d069a1bce8dfa63841042137f8b43434/7.3/sched/0001-bore-cachy.patch",
+    "hash": "sha256-0uqo6Nvx9Wv7ME+LQ3p9wwplQI+QqTcBNnuvitwhc7Q="
+  },
+  "config": {
+    "commit": "780dd8d6a2e611e3bdca15652845bb635c1fbd7f",
+    "url": "https://raw.githubusercontent.com/CachyOS/linux-cachyos/780dd8d6a2e611e3bdca15652845bb635c1fbd7f/linux-cachyos-bore/config",
+    "hash": "sha256-ZFljMB3bv37+lN3rjqRKJl+reUYufr4688YKlP17Peg="
+  },
+  "kernelOrgLatestStable": "7.3.5"
+}

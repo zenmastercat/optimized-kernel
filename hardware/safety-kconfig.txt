@@ -1,0 +1,86 @@
+# Module groups kept even when this PC has not loaded them yet.
+# One Kconfig path per line, relative to the kernel source.
+# "dir/" = every Kconfig file below it; anything else = that one file.
+# Everything else that CachyOS builds as a module is dropped unless the PC
+# loads it (hardware/loaded-modules.txt) or NixOS's initrd asks for it.
+
+# Filesystems and character sets (USB sticks, NTFS/exFAT disks, ISO images)
+fs/
+
+# Networking: firewall, containers, VPNs, bridges, Wi-Fi and Bluetooth stacks
+net/Kconfig
+net/netfilter/
+net/ipv4/
+net/ipv6/
+net/bridge/
+net/sched/
+net/8021q/
+net/bluetooth/
+net/wireless/
+net/mac80211/
+net/rfkill/
+net/packet/
+net/xfrm/
+net/tls/
+net/vmw_vsock/
+net/9p/
+net/llc/
+net/802/
+drivers/net/Kconfig
+drivers/net/usb/
+drivers/net/wireless/intel/
+drivers/net/ethernet/realtek/
+drivers/net/ethernet/intel/
+
+# Input, USB, Thunderbolt: keyboards, mice, game controllers, docks,
+# USB storage and serial adapters, phones, webcams, USB audio
+drivers/hid/
+drivers/input/
+drivers/usb/storage/
+drivers/usb/serial/
+drivers/usb/class/
+drivers/usb/misc/
+drivers/usb/typec/
+drivers/thunderbolt/
+drivers/bluetooth/
+drivers/media/usb/uvc/
+drivers/media/v4l2-core/
+drivers/media/common/videobuf2/
+sound/core/
+sound/usb/
+sound/hda/
+sound/drivers/
+drivers/mmc/
+
+# Disks, encryption, virtual machines, containers
+drivers/block/Kconfig
+drivers/block/zram/
+drivers/md/
+drivers/nvme/
+drivers/scsi/Kconfig
+drivers/vfio/
+drivers/vhost/
+virt/
+arch/x86/kvm/
+crypto/
+lib/
+
+# Intel platform, sensors, power, GPU (i915/xe for the iGPU)
+drivers/char/
+drivers/misc/
+drivers/i2c/Kconfig
+drivers/hwmon/
+drivers/thermal/
+drivers/platform/x86/
+drivers/acpi/
+drivers/cpufreq/
+drivers/powercap/
+drivers/leds/
+drivers/watchdog/
+drivers/power/supply/
+drivers/firmware/
+drivers/iommu/
+drivers/pci/
+drivers/dma-buf/
+drivers/gpu/drm/i915/
+drivers/gpu/drm/xe/
