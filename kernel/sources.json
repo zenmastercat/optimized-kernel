@@ -1,9 +1,9 @@
 {
-  "version": "7.3.4",
+  "version": "7.3.5",
   "source": {
-    "tag": "cachyos-7.3.4-1",
-    "url": "https://github.com/CachyOS/linux/releases/download/cachyos-7.3.4-1/cachyos-7.3.4-1.tar.gz",
-    "hash": "sha256-aVxkHt1d+YSPkxwGv5ejBzTl8okQNnk31f6iNc/TlTU="
+    "tag": "cachyos-7.3.5-2",
+    "url": "https://github.com/CachyOS/linux/releases/download/cachyos-7.3.5-2/cachyos-7.3.5-2.tar.gz",
+    "hash": "sha256-uyKtmeEEL66IO6txNm+DOTZ7dMBFAE/pKtSSMzkJLgc="
   },
   "bore": {
     "commit": "f3770b16d069a1bce8dfa63841042137f8b43434",

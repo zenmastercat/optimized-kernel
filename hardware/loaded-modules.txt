@@ -47,6 +47,7 @@ fat
 fixed_phy
 fuse
 fwnode_mdio
+gcm
 gf128mul
 gpu_sched
 hid_generic
@@ -59,6 +60,7 @@ i3c
 i915
 iTCO_wdt
 idma64
+inet_diag
 input_leds
 int3400_thermal
 int3403_thermal
@@ -213,11 +215,14 @@ spi_intel
 spi_intel_pci
 spi_nor
 stp
+tcp_diag
 thermal
 thunderbolt
 tiny_power_button
 ttm
+tun
 uas
+udp_diag
 uinput
 usb_storage
 usbhid

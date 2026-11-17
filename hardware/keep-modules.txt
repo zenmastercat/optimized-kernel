@@ -53,6 +53,7 @@ fat
 fixed_phy
 fuse
 fwnode_mdio
+gcm
 gf128mul
 gpu_sched
 hid_apple
@@ -74,6 +75,7 @@ i8042
 i915
 iTCO_wdt
 idma64
+inet_diag
 input_leds
 int3400_thermal
 int3403_thermal
@@ -238,13 +240,16 @@ spi_intel_pci
 spi_nor
 sr_mod
 stp
+tcp_diag
 thermal
 thunderbolt
 tiny_power_button
 tpm_crb
 tpm_tis
 ttm
+tun
 uas
+udp_diag
 uhci_hcd
 uinput
 usb_storage
